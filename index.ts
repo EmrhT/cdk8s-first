@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { App, Chart, Size, Helm } from 'cdk8s';
+import { App, Chart, Size, Helm, Duration } from 'cdk8s';
 import * as kplus from 'cdk8s-plus-27';
 
 
@@ -23,8 +23,8 @@ export class WebCacheDB extends Chart {
 
     const db = new kplus.StatefulSet(this, 'DB', {
       containers: [{ 
-        image: 'woahbase/alpine-mysql:x86_64', 
-        portNumber: 3306,
+        image: 'postgres:alpine3.19', 
+        portNumber: 5432,
         resources: { 
           cpu: dbcpuResources,
           memory: dbmemoryResources
@@ -35,8 +35,17 @@ export class WebCacheDB extends Chart {
           ensureNonRoot: false,
           readOnlyRootFilesystem: false
         },
-        liveness: kplus.Probe.fromTcpSocket(), // since this is not a working app, TCP probe is here. 
-        readiness: kplus.Probe.fromTcpSocket() // On prod, /health and /ready must be queried.
+        envVariables: {
+          POSTGRES_PASSWORD: kplus.EnvValue.fromValue('password'),
+        },
+        liveness: kplus.Probe.fromCommand(['pg_isready', '-U', 'postgres', '-d', 'postgres'], {
+          initialDelaySeconds: Duration.seconds(1),
+          timeoutSeconds: Duration.seconds(5),
+        }),
+        readiness: kplus.Probe.fromCommand(['pg_isready', '-U', 'postgres', '-d', 'postgres'], {
+          initialDelaySeconds: Duration.seconds(1),
+          timeoutSeconds: Duration.seconds(5),
+        }),
       }],
       replicas: 2,
       spread: true,
@@ -71,8 +80,8 @@ export class WebCacheDB extends Chart {
           allowPrivilegeEscalation: true,
           ensureNonRoot: false
         },
-        liveness: kplus.Probe.fromTcpSocket(),
-        readiness: kplus.Probe.fromTcpSocket()
+        liveness: kplus.Probe.fromTcpSocket(), // since this is not a working app, TCP probe is here. 
+        readiness: kplus.Probe.fromTcpSocket() // On prod, /health and /ready must be queried.
       }],
       spread: true,
       isolate: true,
@@ -80,6 +89,7 @@ export class WebCacheDB extends Chart {
     cache.scheduling.attract(memoryNodes); // cache deployment will be affinited to storage nodes (node affinity)
 
     const cacheService = cache.exposeViaService(); // by default exposes from the same port with container. here 7000:7000
+    cacheService.metadata.addAnnotation('prometheus.io/scrape', 'true'); // dummy annotation for prometheus scraping
 
     const webcpuResources: kplus.CpuResources = {
       limit: kplus.Cpu.millis(200),
@@ -121,7 +131,6 @@ export class WebCacheDB extends Chart {
     // 
     const deployments: any = [web, cache]; 
 
-
     for (let i = 0; i < deployments.length; i++) {
       new kplus.HorizontalPodAutoscaler(this, 'hpa-' + deployments[i].toString(), {
         target: deployments[i],
@@ -132,11 +141,11 @@ export class WebCacheDB extends Chart {
     }
 
     const serviceWeb = web.exposeViaService({ serviceType: kplus.ServiceType.CLUSTER_IP });
-    serviceWeb.exposeViaIngress('/*');
-
-
+    const ingressWeb = new kplus.Ingress(web, 'WebIngress');
+    
+    ingressWeb.addRule('/', kplus.IngressBackend.fromService(serviceWeb)); // expose web outside to the cluster with ingress
+    
     web.scheduling.attract(memoryNodes);
-
     web.scheduling.colocate(cache, ); // translates into pod affinity
 
     web.connections.allowTo(cache); // creates netpol
@@ -147,8 +156,6 @@ export class WebCacheDB extends Chart {
     web.permissions.grantReadWrite(frontoffice); // grant RW permissions to frontoffice group on web deployment object by creating required role&RB
     db.permissions.grantReadWrite(frontoffice);
     cache.permissions.grantReadWrite(frontoffice);
-
-
 
 
     new Helm(this, 'nginx', {

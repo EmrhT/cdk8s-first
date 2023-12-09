@@ -6,8 +6,8 @@ spec:
   clusterIP: None
   externalIPs: []
   ports:
-    - port: 3306
-      targetPort: 3306
+    - port: 5432
+      targetPort: 5432
   selector:
     cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
   type: ClusterIP
@@ -50,19 +50,36 @@ spec:
               topologyKey: topology.kubernetes.io/zone
       automountServiceAccountToken: false
       containers:
-        - image: woahbase/alpine-mysql:x86_64
+        - env:
+            - name: POSTGRES_PASSWORD
+              value: password
+          image: postgres:alpine3.19
           imagePullPolicy: Always
           livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - postgres
             failureThreshold: 3
-            tcpSocket:
-              port: 3306
+            initialDelaySeconds: 1
+            timeoutSeconds: 5
           name: main
           ports:
-            - containerPort: 3306
+            - containerPort: 5432
           readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - postgres
             failureThreshold: 3
-            tcpSocket:
-              port: 3306
+            initialDelaySeconds: 1
+            timeoutSeconds: 5
           resources:
             limits:
               cpu: 200m
@@ -78,7 +95,7 @@ spec:
           startupProbe:
             failureThreshold: 3
             tcpSocket:
-              port: 3306
+              port: 5432
       dnsPolicy: ClusterFirst
       hostNetwork: false
       restartPolicy: Always
@@ -183,7 +200,7 @@ spec:
             - name: DB_HOST
               value: three-tier-web-app-db-service-c8f9b433
             - name: DB_PORT
-              value: "3306"
+              value: "5432"
           image: redis:7.2.3-bookworm
           imagePullPolicy: Always
           livenessProbe:
@@ -254,7 +271,7 @@ metadata:
 spec:
   egress:
     - ports:
-        - port: 3306
+        - port: 5432
           protocol: TCP
       to:
         - podSelector:
@@ -277,7 +294,7 @@ spec:
             matchLabels:
               cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
       ports:
-        - port: 3306
+        - port: 5432
           protocol: TCP
   podSelector:
     matchLabels:
