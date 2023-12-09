@@ -145,7 +145,6 @@ metadata:
 spec:
   minReadySeconds: 0
   progressDeadlineSeconds: 600
-  replicas: 2
   selector:
     matchLabels:
       cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
@@ -433,7 +432,7 @@ spec:
       targetPort: 5678
   selector:
     cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -526,7 +525,7 @@ subjects:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: three-tier-web-app-hpa-c89ba168
+  name: three-tier-web-ap-hpa-three-tier-web-app-web-c8a93c10
 spec:
   behavior:
     scaleDown:
@@ -559,6 +558,43 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: three-tier-web-app-web-c8d34e9d
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: three-tier-web-hpa-three-tier-web-app-cache-c801711f
+spec:
+  behavior:
+    scaleDown:
+      policies:
+        - periodSeconds: 300
+          type: Pods
+          value: 2
+      selectPolicy: Max
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - periodSeconds: 60
+          type: Pods
+          value: 4
+        - periodSeconds: 60
+          type: Percent
+          value: 200
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  maxReplicas: 100
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 80
+          type: Utilization
+      type: Resource
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: three-tier-web-app-cache-c88af11f
 ---
 apiVersion: v1
 kind: Service

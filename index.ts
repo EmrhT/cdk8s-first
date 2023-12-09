@@ -74,7 +74,6 @@ export class WebCacheDB extends Chart {
         liveness: kplus.Probe.fromTcpSocket(),
         readiness: kplus.Probe.fromTcpSocket()
       }],
-      replicas: 2,
       spread: true,
       isolate: true,
     });
@@ -118,19 +117,21 @@ export class WebCacheDB extends Chart {
     });
 
     // TODO
-    // define HPAs in a for loop for all deployments
     // secret and configmaps
     // 
+    const deployments: any = [web, cache]; 
 
 
-    new kplus.HorizontalPodAutoscaler(this, 'HPA', {
-      target: web,
-      maxReplicas: 100,
-      minReplicas: 2,
-      metrics: [kplus.Metric.resourceCpu(kplus.MetricTarget.averageUtilization(80))]
-    });
+    for (let i = 0; i < deployments.length; i++) {
+      new kplus.HorizontalPodAutoscaler(this, 'hpa-' + deployments[i].toString(), {
+        target: deployments[i],
+        maxReplicas: 100,
+        minReplicas: 2,
+        metrics: [kplus.Metric.resourceCpu(kplus.MetricTarget.averageUtilization(80))]
+      });
+    }
 
-    const serviceWeb = web.exposeViaService({ serviceType: kplus.ServiceType.NODE_PORT });
+    const serviceWeb = web.exposeViaService({ serviceType: kplus.ServiceType.CLUSTER_IP });
     serviceWeb.exposeViaIngress('/*');
 
 
