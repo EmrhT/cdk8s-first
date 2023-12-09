@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-cache-db-db-service-c8777995
+  name: three-tier-web-app-db-service-c8f9b433
 spec:
   clusterIP: None
   externalIPs: []
@@ -9,25 +9,25 @@ spec:
     - port: 3306
       targetPort: 3306
   selector:
-    cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+    cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
   type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: web-cache-db-db-c8668594
+  name: three-tier-web-app-db-c844950d
 spec:
   minReadySeconds: 0
   podManagementPolicy: OrderedReady
   replicas: 2
   selector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
-  serviceName: web-cache-db-db-service-c8777995
+      cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
+  serviceName: three-tier-web-app-db-service-c8f9b433
   template:
     metadata:
       labels:
-        cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+        cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
     spec:
       affinity:
         nodeAffinity:
@@ -42,11 +42,11 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+                  cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
               topologyKey: kubernetes.io/hostname
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+                  cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
               topologyKey: topology.kubernetes.io/zone
       automountServiceAccountToken: false
       containers:
@@ -95,11 +95,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: web-cache-db-db-defaultdenyall-c8da1319
+  name: three-tier-web-app-db-defaultdenyall-c8238577
 spec:
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+      cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
   policyTypes:
     - Egress
     - Ingress
@@ -107,12 +107,12 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c867d947
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c86dfd19
 rules:
   - apiGroups:
       - apps
     resourceNames:
-      - web-cache-db-db-c8668594
+      - three-tier-web-app-db-c844950d
     resources:
       - statefulsets
     verbs:
@@ -128,11 +128,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: rolebindingc86525e0774d77eb60cd0de99fd358d384-c8bc11b3
+  name: rolebindingc87f4f71f9beeac4527463b5492968567a-c89e287d
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c867d947
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c86dfd19
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
@@ -141,14 +141,14 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-cache-db-cache-c80d6033
+  name: three-tier-web-app-cache-c88af11f
 spec:
   minReadySeconds: 0
   progressDeadlineSeconds: 600
   replicas: 2
   selector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+      cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -157,7 +157,7 @@ spec:
   template:
     metadata:
       labels:
-        cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+        cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
     spec:
       affinity:
         nodeAffinity:
@@ -172,17 +172,17 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+                  cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
               topologyKey: kubernetes.io/hostname
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+                  cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
               topologyKey: topology.kubernetes.io/zone
       automountServiceAccountToken: false
       containers:
         - env:
             - name: DB_HOST
-              value: web-cache-db-db-service-c8777995
+              value: three-tier-web-app-db-service-c8f9b433
             - name: DB_PORT
               value: "3306"
           image: redis:7.2.3-bookworm
@@ -226,11 +226,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: web-cache-db-cache-defaultdenyall-c802063e
+  name: three-tier-web-app-cache-defaultdenyall-c8a9599a
 spec:
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+      cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   policyTypes:
     - Egress
     - Ingress
@@ -238,20 +238,20 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-cache-db-cache-service-c89c708c
+  name: three-tier-web-app-cache-service-c8916c2d
 spec:
   externalIPs: []
   ports:
     - port: 6379
       targetPort: 6379
   selector:
-    cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+    cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allowegressc89da2cbceb7c9d75572fb752497ec95bc-c8c00844
+  name: allowegressc85d80663f2078391e084d398a19eba03a-c8dfa550
 spec:
   egress:
     - ports:
@@ -260,41 +260,41 @@ spec:
       to:
         - podSelector:
             matchLabels:
-              cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+              cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+      cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   policyTypes:
     - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allowingressundefinedc89da2cbceb7c9d75572fb75-c80c3aef
+  name: allowingressundefinedc85d80663f2078391e084d39-c868ac88
 spec:
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+              cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
       ports:
         - port: 3306
           protocol: TCP
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-DB-c89da2cb
+      cdk8s.io/metadata.addr: three-tier-web-app-DB-c85d8066
   policyTypes:
     - Ingress
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c81dd0ef
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c84b5d71
 rules:
   - apiGroups:
       - apps
     resourceNames:
-      - web-cache-db-cache-c80d6033
+      - three-tier-web-app-cache-c88af11f
     resources:
       - deployments
     verbs:
@@ -310,11 +310,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: rolebindingc86525e0774d77eb60cd0de99fd358d384-c83fd176
+  name: rolebindingc87f4f71f9beeac4527463b5492968567a-c8071391
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c81dd0ef
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c84b5d71
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
@@ -323,14 +323,13 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-cache-db-web-c81d4f35
+  name: three-tier-web-app-web-c8d34e9d
 spec:
   minReadySeconds: 0
   progressDeadlineSeconds: 600
-  replicas: 2
   selector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+      cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -339,7 +338,7 @@ spec:
   template:
     metadata:
       labels:
-        cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+        cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
     spec:
       affinity:
         nodeAffinity:
@@ -354,38 +353,38 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+                  cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
               topologyKey: kubernetes.io/hostname
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+                  cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
               topologyKey: kubernetes.io/hostname
             - labelSelector:
                 matchLabels:
-                  cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+                  cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
               topologyKey: topology.kubernetes.io/zone
       automountServiceAccountToken: true
       containers:
         - env:
             - name: CACHE_HOST
-              value: web-cache-db-cache-service-c89c708c
+              value: three-tier-web-app-cache-service-c8916c2d
             - name: CACHE_PORT
               value: "6379"
-          image: tomcat:jre11-temurin-jammy
+          image: hashicorp/http-echo
           imagePullPolicy: Always
           livenessProbe:
             failureThreshold: 3
             tcpSocket:
-              port: 8080
+              port: 5678
           name: main
           ports:
-            - containerPort: 8080
+            - containerPort: 5678
           readinessProbe:
             failureThreshold: 3
             tcpSocket:
-              port: 8080
+              port: 5678
           resources:
             limits:
               cpu: 200m
@@ -401,7 +400,7 @@ spec:
           startupProbe:
             failureThreshold: 3
             tcpSocket:
-              port: 8080
+              port: 5678
       dnsPolicy: ClusterFirst
       hostNetwork: false
       restartPolicy: Always
@@ -414,19 +413,48 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: web-cache-db-web-defaultdenyall-c83b757c
+  name: three-tier-web-app-web-defaultdenyall-c8d6239a
 spec:
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+      cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
   policyTypes:
     - Egress
     - Ingress
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: three-tier-web-app-web-service-c8f6a162
+spec:
+  externalIPs: []
+  ports:
+    - port: 5678
+      targetPort: 5678
+  selector:
+    cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: three-tier-web-app-web-service-ingress-c8d6c4d9
+spec:
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: three-tier-web-app-web-service-c8f6a162
+                port:
+                  number: 5678
+            path: /*
+            pathType: Prefix
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allowegressc8f87d6f03ebfab41948060e451b8aa714-c8f06af0
+  name: allowegressc8969bc24d51aca51360d2dc72d89050e5-c8f68549
 spec:
   egress:
     - ports:
@@ -435,41 +463,41 @@ spec:
       to:
         - podSelector:
             matchLabels:
-              cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+              cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+      cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
   policyTypes:
     - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allowingressundefinedc8f87d6f03ebfab41948060e-c8374d18
+  name: allowingressundefinedc8969bc24d51aca51360d2dc-c805d545
 spec:
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
+              cdk8s.io/metadata.addr: three-tier-web-app-Web-c8467b8b
       ports:
         - port: 6379
           protocol: TCP
   podSelector:
     matchLabels:
-      cdk8s.io/metadata.addr: web-cache-db-Cache-c8f87d6f
+      cdk8s.io/metadata.addr: three-tier-web-app-Cache-c8969bc2
   policyTypes:
     - Ingress
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c8f42100
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c8657b63
 rules:
   - apiGroups:
       - apps
     resourceNames:
-      - web-cache-db-web-c81d4f35
+      - three-tier-web-app-web-c8d34e9d
     resources:
       - deployments
     verbs:
@@ -485,39 +513,63 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: rolebindingc86525e0774d77eb60cd0de99fd358d384-c8d24a75
+  name: rolebindingc87f4f71f9beeac4527463b5492968567a-c892a663
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: rolec86525e0774d77eb60cd0de99fd358d384c391ab8-c8f42100
+  name: rolec87f4f71f9beeac4527463b5492968567a06ea46f-c8657b63
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: frontoffice
 ---
-apiVersion: v1
-kind: Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
 metadata:
-  name: web-cache-db-web-service-c88d0721
+  name: three-tier-web-app-hpa-c89ba168
 spec:
-  externalIPs: []
-  ports:
-    - port: 8080
-      targetPort: 8080
-  selector:
-    cdk8s.io/metadata.addr: web-cache-db-Web-c80a671e
-  type: NodePort
+  behavior:
+    scaleDown:
+      policies:
+        - periodSeconds: 300
+          type: Pods
+          value: 2
+      selectPolicy: Max
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - periodSeconds: 60
+          type: Pods
+          value: 4
+        - periodSeconds: 60
+          type: Percent
+          value: 200
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  maxReplicas: 100
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 80
+          type: Utilization
+      type: Resource
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: three-tier-web-app-web-c8d34e9d
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nginx
     app.kubernetes.io/version: 1.25.3
     helm.sh/chart: nginx-15.4.4
-  name: web-cache-db-nginx-c853d4df
+  name: three-tier-web-app-nginx-c81b8494
   namespace: test-app
 spec:
   externalTrafficPolicy: Cluster
@@ -526,7 +578,7 @@ spec:
       port: 80
       targetPort: http
   selector:
-    app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
     app.kubernetes.io/name: nginx
   sessionAffinity: None
   type: LoadBalancer
@@ -535,19 +587,19 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nginx
     app.kubernetes.io/version: 1.25.3
     helm.sh/chart: nginx-15.4.4
-  name: web-cache-db-nginx-c853d4df
+  name: three-tier-web-app-nginx-c81b8494
   namespace: test-app
 spec:
   replicas: 2
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+      app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
       app.kubernetes.io/name: nginx
   strategy:
     rollingUpdate: {}
@@ -555,7 +607,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+        app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: nginx
         app.kubernetes.io/version: 1.25.3
@@ -567,7 +619,7 @@ spec:
             - podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/instance: web-cache-db-nginx-c853d4df
+                    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
                     app.kubernetes.io/name: nginx
                 topologyKey: kubernetes.io/hostname
               weight: 1

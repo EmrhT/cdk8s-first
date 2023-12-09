@@ -7,6 +7,7 @@ export class WebCacheDB extends Chart {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
+
     const storageNodes = kplus.Node.labeled(kplus.NodeLabelQuery.is('optimized', 'storage'));
     const memoryNodes = kplus.Node.labeled(kplus.NodeLabelQuery.is('optimized', 'memory'));
 
@@ -94,8 +95,8 @@ export class WebCacheDB extends Chart {
     const web = new kplus.Deployment(this, 'Web', {
       automountServiceAccountToken: true, // this is required for services that consume other AWS resources with IRSA
       containers: [{
-        image: 'tomcat:jre11-temurin-jammy',
-        portNumber: 8080,
+        image: 'hashicorp/http-echo',
+        portNumber: 5678,
         resources: { 
           cpu: webcpuResources,
           memory: webmemoryResources
@@ -112,10 +113,27 @@ export class WebCacheDB extends Chart {
         liveness: kplus.Probe.fromTcpSocket(),
         readiness: kplus.Probe.fromTcpSocket()
       }],
-      replicas: 2,
       spread: true,
       isolate: true,
     });
+
+    // TODO
+    // define HPAs in a for loop for all deployments
+    // secret and configmaps
+    // 
+
+
+    new kplus.HorizontalPodAutoscaler(this, 'HPA', {
+      target: web,
+      maxReplicas: 100,
+      minReplicas: 2,
+      metrics: [kplus.Metric.resourceCpu(kplus.MetricTarget.averageUtilization(80))]
+    });
+
+    const serviceWeb = web.exposeViaService({ serviceType: kplus.ServiceType.NODE_PORT });
+    serviceWeb.exposeViaIngress('/*');
+
+
     web.scheduling.attract(memoryNodes);
 
     web.scheduling.colocate(cache, ); // translates into pod affinity
@@ -129,7 +147,8 @@ export class WebCacheDB extends Chart {
     db.permissions.grantReadWrite(frontoffice);
     cache.permissions.grantReadWrite(frontoffice);
 
-    web.exposeViaService({ serviceType: kplus.ServiceType.NODE_PORT });
+
+
 
     new Helm(this, 'nginx', {
       namespace: 'test-app',
@@ -148,5 +167,5 @@ export class WebCacheDB extends Chart {
 }
 
 const app = new App();
-new WebCacheDB(app, 'web-cache-db');
+new WebCacheDB(app, 'three-tier-web-app');
 app.synth();
