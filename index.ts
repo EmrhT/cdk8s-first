@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { App, Chart, Size, Helm, Duration } from 'cdk8s';
 import * as kplus from 'cdk8s-plus-27';
+import { VirtualServer } from './imports/k8s.nginx.org';
 
 
 export class WebCacheDB extends Chart {
@@ -29,7 +30,7 @@ export class WebCacheDB extends Chart {
           cpu: dbcpuResources,
           memory: dbmemoryResources
         },
-        securityContext: {
+        securityContext: { // privileged containers are bad practice and just here for demonstration
           privileged: true,
           allowPrivilegeEscalation: true,
           ensureNonRoot: false,
@@ -75,7 +76,7 @@ export class WebCacheDB extends Chart {
           DB_HOST: kplus.EnvValue.fromValue(db.service.name),
           DB_PORT: kplus.EnvValue.fromValue(db.service.port.toString()),
         },
-        securityContext: {
+        securityContext: { 
           privileged: true,
           allowPrivilegeEscalation: true,
           ensureNonRoot: false
@@ -90,6 +91,11 @@ export class WebCacheDB extends Chart {
 
     const cacheService = cache.exposeViaService(); // by default exposes from the same port with container. here 7000:7000
     cacheService.metadata.addAnnotation('prometheus.io/scrape', 'true'); // dummy annotation for prometheus scraping
+
+    const cacheConfigmap = new kplus.ConfigMap(this, 'CacheConfig'); // configmap with dummy appsettings.json file 
+    cacheConfigmap.addFile('files/appsettings.json');
+    const cacheVolume = kplus.Volume.fromConfigMap(this, 'Volume', cacheConfigmap);
+    cache.containers[0].mount('/tmp', cacheVolume)
 
     const webcpuResources: kplus.CpuResources = {
       limit: kplus.Cpu.millis(200),
@@ -126,9 +132,6 @@ export class WebCacheDB extends Chart {
       isolate: true,
     });
 
-    // TODO
-    // secret and configmaps
-    // 
     const deployments: any = [web, cache]; 
 
     for (let i = 0; i < deployments.length; i++) {
@@ -157,14 +160,40 @@ export class WebCacheDB extends Chart {
     db.permissions.grantReadWrite(frontoffice);
     cache.permissions.grantReadWrite(frontoffice);
 
+    // secrets will be added by using External SO in a EKS cluster by using secret store and external secret CRDs
 
-    new Helm(this, 'nginx', {
-      namespace: 'test-app',
-      chart: 'bitnami/nginx',
-      values: {
-        image: {
+    new VirtualServer(this, 'dummyVirtualServer', {  // created just for the sake of practice for importing and creating a CRD
+      spec: {
+        host: 'dummyhost.example.com',
+        listener: {
+          http: 'http-8043'
+        },
+        tls: {
+          secret: 'dummy-secret'
+        },
+        gunzip: true,
+        upstreams: [{
+          name: 'test',
+          service: 'test-service',
+          port: 8000
+        }],
+        routes: [{
+          path: '/test',
+          action: {
+            pass: 'test'
+          }
+        }]
+      }
+    });
+
+
+    new Helm(this, 'nginxHelm', {  // created just for the sake of practice for helm usage
+      namespace: 'test-app',       // this method of directly downloading and using helm chartis practical but DOES NOT provide type safety
+      chart: 'bitnami/nginx',      // which kills the most of the added value of using CDK8S and typescript
+      values: {                    // instead, helm chart must be imported with "cdk8s import helm:https://charts.bitnami.com/bitnami/nginx"
+        image: {                   
           repository: 'bitnami/nginx',
-          tag: 'latest'
+          tag: 'latest',
         },
         replicaCount: 2
       }

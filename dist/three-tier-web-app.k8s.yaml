@@ -230,6 +230,9 @@ spec:
             failureThreshold: 3
             tcpSocket:
               port: 6379
+          volumeMounts:
+            - mountPath: /tmp
+              name: configmap-three-tier-web-app-cacheconfig-c896f750
       dnsPolicy: ClusterFirst
       hostNetwork: false
       restartPolicy: Always
@@ -238,6 +241,10 @@ spec:
         runAsNonRoot: true
       setHostnameAsFQDN: false
       terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            name: three-tier-web-app-cacheconfig-c896f750
+          name: configmap-three-tier-web-app-cacheconfig-c896f750
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -254,6 +261,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    prometheus.io/scrape: "true"
   name: three-tier-web-app-cache-service-c8916c2d
 spec:
   externalIPs: []
@@ -335,6 +344,77 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: frontoffice
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: three-tier-web-app-cacheconfig-c896f750
+data:
+  appsettings.json: |-
+    {
+        "host_id": "",
+      
+        "host_name": "My instance of the IIS Administration API",
+      
+        "logging": {
+          "enabled": true,
+          "file_name": "log-{Date}.txt",
+          "min_level": "Error",
+          "path": null
+        },
+      
+        "auditing": {
+          "enabled": true,
+          "file_name": "audit-{Date}.txt",
+          "path": null
+        },
+      
+        "security": {
+          "require_windows_authentication": true,
+          "users": {
+            "administrators": [
+            ],
+            "owners": [
+            ]
+          },
+          "access_policy": {
+            "api": {
+              "users": "administrators",
+              "access_key": true
+            },
+            "api_keys": {
+              "users": "administrators",
+              "access_key": false
+            },
+            "system": {
+              "users": "owners",
+              "access_key": true
+            }
+          }
+        },
+      
+        "cors": {
+          "rules": [
+            {
+              "origin": "https://contoso.com",
+              "allow": true
+            }
+          ]
+        },
+      
+        "files": {
+          "locations": [
+            {
+              "alias": "inetpub",
+              "path": "%systemdrive%\\inetpub",
+              "claims": [
+                "read"
+              ]
+            }
+          ]
+        }
+      }
+immutable: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -454,7 +534,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: three-tier-web-app-web-service-ingress-c8d6c4d9
+  name: three-tier-web-app-web-webingress-c8f06c64
 spec:
   rules:
     - http:
@@ -464,7 +544,7 @@ spec:
                 name: three-tier-web-app-web-service-c8f6a162
                 port:
                   number: 5678
-            path: /*
+            path: /
             pathType: Prefix
 ---
 apiVersion: networking.k8s.io/v1
@@ -613,16 +693,36 @@ spec:
     kind: Deployment
     name: three-tier-web-app-cache-c88af11f
 ---
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: three-tier-web-app-dummyvirtualserver-c8e039a2
+spec:
+  gunzip: true
+  host: dummyhost.example.com
+  listener:
+    http: http-8043
+  routes:
+    - action:
+        pass: test
+      path: /test
+  tls:
+    secret: dummy-secret
+  upstreams:
+    - name: test
+      port: 8000
+      service: test-service
+---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+    app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nginx
     app.kubernetes.io/version: 1.25.3
     helm.sh/chart: nginx-15.4.4
-  name: three-tier-web-app-nginx-c81b8494
+  name: three-tier-web-app-nginxhelm-c81b8494
   namespace: test-app
 spec:
   externalTrafficPolicy: Cluster
@@ -631,7 +731,7 @@ spec:
       port: 80
       targetPort: http
   selector:
-    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+    app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
     app.kubernetes.io/name: nginx
   sessionAffinity: None
   type: LoadBalancer
@@ -640,19 +740,19 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+    app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nginx
     app.kubernetes.io/version: 1.25.3
     helm.sh/chart: nginx-15.4.4
-  name: three-tier-web-app-nginx-c81b8494
+  name: three-tier-web-app-nginxhelm-c81b8494
   namespace: test-app
 spec:
   replicas: 2
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+      app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
       app.kubernetes.io/name: nginx
   strategy:
     rollingUpdate: {}
@@ -660,7 +760,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+        app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: nginx
         app.kubernetes.io/version: 1.25.3
@@ -672,7 +772,7 @@ spec:
             - podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/instance: three-tier-web-app-nginx-c81b8494
+                    app.kubernetes.io/instance: three-tier-web-app-nginxhelm-c81b8494
                     app.kubernetes.io/name: nginx
                 topologyKey: kubernetes.io/hostname
               weight: 1

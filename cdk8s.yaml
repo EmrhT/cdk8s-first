@@ -1,2 +1,4 @@
 app: npx ts-node index.ts
 language: typescript
+imports:
+  - /dev/stdin
