@@ -5,8 +5,13 @@ import { VirtualServer } from './imports/k8s.nginx.org';
 
 
 export class WebCacheDB extends Chart {
-  constructor(scope: Construct, id: string) {
-    super(scope, id);
+  constructor(scope: Construct, ns: string) {
+    super(scope, ns, {
+      namespace: 'test-app',
+      labels: {
+        app: 'test-app'
+      }
+    });
 
 
     const storageNodes = kplus.Node.labeled(kplus.NodeLabelQuery.is('optimized', 'storage'));
@@ -162,7 +167,7 @@ export class WebCacheDB extends Chart {
 
     // secrets will be added by using External SO in a EKS cluster by using secret store and external secret CRDs
 
-    new VirtualServer(this, 'dummyVirtualServer', {  // created just for the sake of practice for importing and creating a CRD
+    const dummyVirtualServer= new VirtualServer(this, 'dummyVirtualServer', {  // created just for the sake of practice for importing and creating a CRD
       spec: {
         host: 'dummyhost.example.com',
         listener: {
@@ -186,6 +191,7 @@ export class WebCacheDB extends Chart {
       }
     });
 
+    dummyVirtualServer.addDependency(web); // a dummy dependency for demo purposes
 
     new Helm(this, 'nginxHelm', {  // created just for the sake of practice for helm usage
       namespace: 'test-app',       // this method of directly downloading and using helm chartis practical but DOES NOT provide type safety
